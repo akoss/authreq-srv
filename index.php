@@ -18,7 +18,7 @@ $signatureRequest->setupWith(
 	$expiry = 60
 );
 
-echo $signatureRequest->getBencode();
+//echo $signatureRequest->getBencode();
 
 echo $signatureRequest->getSignature();
 

@@ -16,6 +16,14 @@ class SignatureRequest {
 	private $srv_signature;
 	public $expiry_in_seconds;
 
+	function getPrivateKey() {
+		return openssl_pkey_get_private('file://../srv-keys/mykey.pem');
+	}
+
+	function getPublicKey() {
+		return openssl_pkey_get_public('file://../srv-keys/mykey.pub');
+	}
+
 	function getBencode() {
 		return BEncode::encode([
 			'body'=>$this->push_text,
@@ -30,11 +38,34 @@ class SignatureRequest {
 		]);
 	}
 
-	function getSignature() {
+	function getHash() {
 		$bencoded = $this->getBencode();
-		$hash = base64_encode(hash("sha256", $bencoded, true));
+		return base64_encode(hash("sha256", $bencoded, true));
+	}
 
-		return $hash;
+	function getSignature() {
+		$data = $this->getBencode();
+
+		$private_key = $this->getPrivateKey();
+		$public_key  = $this->getPublicKey();
+
+		$binary_signature = "";
+
+		openssl_sign($data, $binary_signature, $private_key, 'sha256WithRSAEncryption');
+
+		$ok = openssl_verify($data, $binary_signature, $public_key, 'sha256');
+
+		if ($ok != 1) {
+		    return null;
+		}
+
+		$ok = openssl_verify('tampered'.$data, $binary_signature, $public_key, 'sha256');
+
+		if ($ok != 0) {
+		    return null;
+		}
+
+		return base64_encode($binary_signature);
 	}
 
 	function getBencodeForSignature() {
