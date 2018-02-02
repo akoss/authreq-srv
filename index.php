@@ -11,11 +11,11 @@ $signatureRequest = new SignatureRequest;
 $signatureRequest->setupWith(
 	$service_provider_name = 'Nationwide', 
 	$message_id = 2341234, 
-	$response_url = 'http://192.168.100.139:8080/authreq-srv/callback.php', 
+	$response_url = 'http://192.168.1.128:8080/authreq-srv/callback.php', 
 	$long_description = 'Sending £46.00 to Mr L Balog from your FlexDirect debit account on 13rd Oct, 16:07', 
 	$short_description = '£46.00 to Mr L Balog', 
 	$nonce = 'pinafül7', 
-	$expiry = 60
+	$expiry = 5000
 );
 
 //echo $signatureRequest->getBencode();
