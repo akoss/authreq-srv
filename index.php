@@ -16,7 +16,7 @@ $signatureRequest->setupWith(
 	$response_url = 'http://192.168.100.139:8080/authreq-srv/callback.php', 
 	$long_description = 'Sending £47.00 to Mr L Balog from your FlexDirect debit account on 13rd Oct, 16:07', 
 	$short_description = '£47.00 to Mr L Balog', 
-	$nonce = 'pinafül7', 
+	$nonce = null, 
 	$expiry_in_seconds = 5000, 
 	$device_id = 2
 );

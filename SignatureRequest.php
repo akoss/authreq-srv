@@ -77,7 +77,13 @@ class SignatureRequest {
 		$this->expiry_in_seconds = $expiry_in_seconds; 
 		$this->short_title = $short_description;
 		$this->message_id = $message_id; 
-		$this->nonce = $nonce; 
+
+		if(empty($nonce)) {
+			$this->nonce = bin2hex(openssl_random_pseudo_bytes(32));
+		} else {
+			$this->nonce = $nonce; 
+		}
+		
 		$this->response_url = $response_url; 
 		$this->timestamp = time();
 		$this->push_category = 'challengecategory';
