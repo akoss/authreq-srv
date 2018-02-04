@@ -82,14 +82,24 @@ class DatabaseSignature extends Signature {
 		return $self;
 	}
 
-	public function setupWith($message_id, $signature, $device_id){
+	public function setupWith($message_id, $signature){
 
-		$this->device_id = $device_id;
-
-		$records = $this->db->select("SELECT * FROM `device` WHERE device_id = " . $device_id . ";");
+		$records = $this->db->select("SELECT * FROM `signaturerequest` WHERE message_id = " . $message_id . ";");
 		if(count($records) == 1) {
 			$record = $records[0];
-			$pem = $record['pem'];
+			$this->device_id = $record['device_id'];
+		} else {
+			$this->device_id = null;
+		}
+
+		if($this->device_id != null) {
+			$records = $this->db->select("SELECT * FROM `device` WHERE device_id = " . $this->device_id . ";");
+			if(count($records) == 1) {
+				$record = $records[0];
+				$pem = $record['pem'];
+			} else {
+				$pem = null;
+			}			
 		} else {
 			$pem = null;
 		}

@@ -14,8 +14,7 @@ $db = new Db();
 $sig = new DatabaseSignature($db);
 $sig->setupWith(
 	$message_id = $message_id,
-	$signature = $signature,
-	$device_id = 0
+	$signature = $signature
 );
 
 if(!$sig->saved) {

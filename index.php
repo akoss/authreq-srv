@@ -18,7 +18,7 @@ $signatureRequest->setupWith(
 	$short_description = '£47.00 to Mr L Balog', 
 	$nonce = 'pinafül7', 
 	$expiry_in_seconds = 5000, 
-	$device_id = 0
+	$device_id = 2
 );
 
 if(!$signatureRequest->saved) {
