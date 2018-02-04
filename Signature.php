@@ -4,20 +4,17 @@ class Signature {
 	public $message_id;
 	public $signature;
 	public $pem;
-	public $device_id;
 	public $timestamp;
 	public $success;
 
     function __construct() {
     }
 
-	public function setupWith($message_id, $signature, $pem, $device_id){
+	public function setupWith($message_id, $signature, $pem){
 		$this->message_id = $message_id; 
 		$this->signature = $signature;
-		$this->pem = $pem; 
-		$this->device_id = $device_id;
+		$this->pem = $pem;
 		$this->timestamp = time();
-
 		$this->success = false; 
 	}
 
@@ -33,6 +30,7 @@ class DatabaseSignature extends Signature {
 	public $saved = false;
 
 	public $signature_id;
+	public $device_id;
 
     function __construct($db) {
         parent::__construct();
@@ -42,12 +40,11 @@ class DatabaseSignature extends Signature {
 	public function save() {
 		$message_id = $this->db->quote($this->message_id);
 		$signature = $this->db->quote($this->signature);
-		$pem = $this->db->quote($this->pem);
 		$device_id = $this->db->quote($this->device_id);
 		$timestamp = $this->db->quote($this->timestamp);
 		$success = $this->db->quote($this->success);
 
-		$query = "INSERT INTO `signature` (`message_id`,`signature`,`pem`,`device_id`,`timestamp`,`success`) VALUES (" . $message_id . "," . $signature . "," . $pem . "," . $device_id . "," . $timestamp . "," . $success . ")";
+		$query = "INSERT INTO `signature` (`message_id`,`signature`,`device_id`,`timestamp`,`success`) VALUES (" . $message_id . "," . $signature . "," . $device_id . "," . $timestamp . "," . $success . ")";
 
 		$result = $this->db->query($query) == 1;
 
@@ -67,19 +64,37 @@ class DatabaseSignature extends Signature {
 			$self = new DatabaseSignature($db);
 			$self->message_id = $record['message_id'];
 			$self->signature = $record['signature'];
-			$self->pem = $record['pem'];
 			$self->device_id = $record['device_id'];
 			$self->timestamp = $record['timestamp'];
 			$self->success = $record['success'];
 		} else {
-			die("Not found");
 			return null;
 		}
+
+		$records = $db->select("SELECT * FROM `device` WHERE device_id = " . $device_id . ";");
+		if(count($records) == 1) {
+			$record = $records[0];
+			$self->pem = $record['pem'];
+		} else {
+			return null;
+		}
+
 		return $self;
 	}
 
-	public function setupWith($message_id, $signature, $pem, $device_id){
-		parent::setupWith($message_id, $signature, $pem, $device_id);
+	public function setupWith($message_id, $signature, $device_id){
+
+		$this->device_id = $device_id;
+
+		$records = $this->db->select("SELECT * FROM `device` WHERE device_id = " . $device_id . ";");
+		if(count($records) == 1) {
+			$record = $records[0];
+			$pem = $record['pem'];
+		} else {
+			$pem = null;
+		}
+
+		parent::setupWith($message_id, $signature, $pem);
 		$this->success = $this->validate();
 		$this->saved = ($this->save() == 1);
 	}

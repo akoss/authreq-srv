@@ -117,8 +117,10 @@ class SignatureRequest {
 
 		$aErrorQueue = $push->getErrors();
 		if (!empty($aErrorQueue)) {
-			var_dump($aErrorQueue);
+			// var_dump($aErrorQueue);
+			return false;
 		}
+		return true;
 	}
 }
 
@@ -126,6 +128,7 @@ class DatabaseSignatureRequest extends SignatureRequest {
 
 	private $db; 
 	public $saved = false;
+	public $device_id;
 
     function __construct($db) {
         parent::__construct();
@@ -142,10 +145,11 @@ class DatabaseSignatureRequest extends SignatureRequest {
 		$message_id = $this->db->quote($this->message_id);
 		$response_url = $this->db->quote($this->response_url);
 		$timestamp = $this->db->quote($this->timestamp);
+		$device_id = $this->db->quote($this->device_id);
 
 		$expiry_in_seconds = $this->db->quote($this->expiry_in_seconds);
 
-		$query = "INSERT INTO `signaturerequest` (`nonce`,`push_title`,`push_subtitle`,`push_category`,`push_text`,`short_title`,`message_id`,`response_url`,`timestamp`,`expiry_in_seconds`) VALUES (" . $nonce . "," . $push_title . "," . $push_subtitle . "," . $push_category . "," . $push_text . "," . $short_title . "," . $message_id . "," . $response_url . "," . $timestamp . "," . $expiry_in_seconds . ")";
+		$query = "INSERT INTO `signaturerequest` (`nonce`,`push_title`,`push_subtitle`,`push_category`,`push_text`,`short_title`,`message_id`,`response_url`,`timestamp`,`expiry_in_seconds`, `device_id`) VALUES (" . $nonce . "," . $push_title . "," . $push_subtitle . "," . $push_category . "," . $push_text . "," . $short_title . "," . $message_id . "," . $response_url . "," . $timestamp . "," . $expiry_in_seconds . "," . $device_id . ")";
 
 		$result = $this->db->query($query) == 1;
 
@@ -173,6 +177,7 @@ class DatabaseSignatureRequest extends SignatureRequest {
 			$self->response_url = $record['response_url'];
 			$self->timestamp = $record['timestamp'];
 			$self->expiry_in_seconds = $record['expiry_in_seconds'];
+			$self->device_id = $record['device_id'];
 
 		} else {
 			die("Not found");
@@ -182,8 +187,11 @@ class DatabaseSignatureRequest extends SignatureRequest {
 		return $self;
 	}
 
-	public function setupWith($service_provider_name, $message_id, $response_url, $long_description, $short_description, $nonce = null, $expiry_in_seconds = 300){
+	public function setupWith($service_provider_name, $message_id, $response_url, $long_description, $short_description, $nonce, $expiry_in_seconds, $device_id){
 		parent::setupWith($service_provider_name, $message_id, $response_url, $long_description, $short_description, $nonce, $expiry_in_seconds);
+
+		$this->device_id = $device_id; 
+
 		$this->saved = ($this->save() == 1);
 		$this->srv_signature = $this->getSignature();
 	}
@@ -194,6 +202,18 @@ class DatabaseSignatureRequest extends SignatureRequest {
 		$records = $db->select($query);
 
 		return (count($records) >= 1);
+	}
+
+	public function sendPush() {
+		$records = $this->db->select("SELECT * FROM `device` WHERE device_id = " . $this->device_id . ";");
+		if(count($records) == 1) {
+			$record = $records[0];
+			$token = $record['token'];
+		} else {
+			return false;
+		}
+
+		return parent::sendPush($token);
 	}
 }
 
