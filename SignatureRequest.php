@@ -11,10 +11,12 @@ class SignatureRequest {
 	public $response_url;
 	public $timestamp;
 	public $reply_timestamp;
-	private $expiry;
 
-	private $srv_signature;
+	public $srv_signature;
 	public $expiry_in_seconds;
+
+    function __construct() {
+    }
 
 	function getPrivateKey() {
 		return openssl_pkey_get_private('file://../srv-keys/mykey.pem');
@@ -34,7 +36,7 @@ class SignatureRequest {
 			'message_id'=>$this->message_id,
 			'short_title'=>$this->short_title,
 			'nonce'=>$this->nonce,
-			'expiry'=>$this->expiry,
+			'expiry'=>$this->timestamp + $this->expiry_in_seconds,
 		]);
 	}
 
@@ -68,19 +70,16 @@ class SignatureRequest {
 		return base64_encode($binary_signature);
 	}
 
-	function getBencodeForSignature() {
+	public function setupWith($service_provider_name, $message_id = null, $response_url, $long_description, $short_description, $nonce = null, $expiry_in_seconds = 300){
 
-	}
-
-	function setupWith($service_provider_name, $message_id, $response_url, $long_description, $short_description, $nonce = null, $expiry = null){
 		$this->push_text = $long_description; 
 		$this->push_subtitle = $service_provider_name;
-		$this->expiry_in_seconds = $expiry; 
+		$this->expiry_in_seconds = $expiry_in_seconds; 
 		$this->short_title = $short_description;
 		$this->message_id = $message_id; 
 		$this->nonce = $nonce; 
 		$this->response_url = $response_url; 
-		$this->expiry = time() + $this->expiry_in_seconds;
+		$this->timestamp = time();
 		$this->push_category = 'challengecategory';
 
 		$this->push_title = json_decode('"\uD83D\uDD35"') . " " . 'New Signature Request';
@@ -96,8 +95,7 @@ class SignatureRequest {
 		$push->setLogger(new ApnsPHP_Log_Silent());
 		$push->setRootCertificationAuthority('entrust_root_certification_authority.pem');
 		$push->connect();
-		$message = new ApnsPHP_Message($token); // X
-		//$message = new ApnsPHP_Message('fc27299d7a17ef04da8fb4448bca82f4ca620ea0134537c3cdce0f017c6e5a05'); // 5s
+		$message = new ApnsPHP_Message($token);
 
 		$message->setBadge(1);
 
@@ -107,8 +105,10 @@ class SignatureRequest {
 		$message->setCategory($this->push_category);
 		$message->setContentAvailable(true);
 		$message->setSound();
-		//throw new Exception($this->srv_signature);
-		$message->setCustomProperty('additional_data', array('bencode' => $this->getBencode(), 'expiry' => $this->expiry, 'short_title' => $this->short_title, 'signature' => $this->srv_signature, 'message_id' => $this->message_id, 'nonce' => $this->nonce, 'response_url'=> $this->response_url));
+
+		$additional_data = array('bencode' => $this->getBencode(), 'expiry' => $this->timestamp + $this->expiry_in_seconds, 'short_title' => $this->short_title, 'signature' => $this->srv_signature, 'message_id' => $this->message_id, 'nonce' => $this->nonce, 'response_url'=> $this->response_url);
+
+		$message->setCustomProperty('additional_data', $additional_data);
 
 		$message->setExpiry($this->expiry_in_seconds);
 		$push->add($message);
@@ -121,4 +121,75 @@ class SignatureRequest {
 		}
 	}
 }
+
+class DatabaseSignatureRequest extends SignatureRequest {
+
+	private $db; 
+	public $saved = false;
+
+    function __construct($db) {
+        parent::__construct();
+        $this->db = $db; 
+    }
+
+	public function save() {
+		$nonce = $this->db->quote($this->nonce);
+		$push_title = $this->db->quote($this->push_title);
+		$push_subtitle = $this->db->quote($this->push_subtitle);
+		$push_category = $this->db->quote($this->push_category);
+		$push_text = $this->db->quote($this->push_text);
+		$short_title = $this->db->quote($this->short_title);
+		$message_id = $this->db->quote($this->message_id);
+		$response_url = $this->db->quote($this->response_url);
+		$timestamp = $this->db->quote($this->timestamp);
+
+		$expiry_in_seconds = $this->db->quote($this->expiry_in_seconds);
+
+		$query = "INSERT INTO `signaturerequest` (`nonce`,`push_title`,`push_subtitle`,`push_category`,`push_text`,`short_title`,`message_id`,`response_url`,`timestamp`,`expiry_in_seconds`) VALUES (" . $nonce . "," . $push_title . "," . $push_subtitle . "," . $push_category . "," . $push_text . "," . $short_title . "," . $message_id . "," . $response_url . "," . $timestamp . "," . $expiry_in_seconds . ")";
+
+		$result = $this->db->query($query) == 1;
+
+		if($result) {
+			$this->message_id = $this->db->insert_id();
+		}
+
+		return $result;
+	}
+
+	public static function loadFromDatabase($db, $message_id) {
+		$msgid = $db->quote($message_id);
+		$records = $db->select("SELECT * FROM `signaturerequest` WHERE message_id = " . $msgid . ";");
+
+		if(count($records) == 1) {
+			$record = $records[0];
+			// print_r($record);
+
+			$self = new DatabaseSignatureRequest($db);
+
+			$self->nonce = $record['nonce'];
+			$self->push_title = $record['push_title'];
+			$self->push_subtitle = $record['push_subtitle'];
+			$self->push_category = $record['push_category'];
+			$self->push_text = $record['push_text'];
+			$self->short_title = $record['short_title'];
+			$self->message_id = $record['message_id'];
+			$self->response_url = $record['response_url'];
+			$self->timestamp = $record['timestamp'];
+			$self->expiry_in_seconds = $record['expiry_in_seconds'];
+
+		} else {
+			die("nincsmeg");
+			return null;
+		}
+
+		return $self;
+	}
+
+	public function setupWith($service_provider_name, $message_id, $response_url, $long_description, $short_description, $nonce = null, $expiry_in_seconds = 300){
+		parent::setupWith($service_provider_name, $message_id, $response_url, $long_description, $short_description, $nonce, $expiry_in_seconds);
+		$this->saved = ($this->save() == 1);
+		$this->srv_signature = $this->getSignature();
+	}
+}
+
 ?>
