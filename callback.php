@@ -1,6 +1,7 @@
 <?php 
 
 include('SignatureRequest.php');
+include('Signature.php');
 include('bencode.php');
 include('ApnsPHP/Autoload.php');
 
@@ -12,15 +13,21 @@ $signature = $data["signature"];
 $pem = $data["publickey"];
 
 $db = new Db();
-$record = DatabaseSignatureRequest::loadFromDatabase($db, $message_id);
+$sig = new DatabaseSignature($db);
+$sig->setupWith(
+	$message_id = $message_id,
+	$signature = $signature,
+	$pem = $pem,
+	$device_id = 0
+);
 
-$bencodedOriginalMessage = $record->getBencode();
-
-$say = openssl_verify($bencodedOriginalMessage, hex2bin($signature), $pem, "sha256");
+if(!$sig->saved) {
+	die("not saved");
+}
 
 $status_header = 'HTTP/1.1 ' . "200";
 header($status_header);
 header('Content-type: ' . "application/json");
-echo json_encode(array("success" => ($say == 1)));
+echo json_encode(array("success" => ($sig->success == 1)));
 
 ?>

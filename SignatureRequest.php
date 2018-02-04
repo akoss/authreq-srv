@@ -187,6 +187,14 @@ class DatabaseSignatureRequest extends SignatureRequest {
 		$this->saved = ($this->save() == 1);
 		$this->srv_signature = $this->getSignature();
 	}
+
+	public static function isSigned($db, $message_id) {
+		$msgid = $db->quote($message_id);
+		$query = "SELECT * FROM `signature` WHERE message_id = " . $msgid . " AND success = 1;";
+		$records = $db->select($query);
+
+		return (count($records) >= 1);
+	}
 }
 
 ?>
