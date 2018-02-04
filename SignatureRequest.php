@@ -162,23 +162,20 @@ class DatabaseSignatureRequest extends SignatureRequest {
 
 		if(count($records) == 1) {
 			$record = $records[0];
-			// print_r($record);
-
 			$self = new DatabaseSignatureRequest($db);
-
 			$self->nonce = $record['nonce'];
 			$self->push_title = $record['push_title'];
 			$self->push_subtitle = $record['push_subtitle'];
 			$self->push_category = $record['push_category'];
 			$self->push_text = $record['push_text'];
 			$self->short_title = $record['short_title'];
-			$self->message_id = $record['message_id'];
+			$self->message_id = intval($record['message_id']);
 			$self->response_url = $record['response_url'];
 			$self->timestamp = $record['timestamp'];
 			$self->expiry_in_seconds = $record['expiry_in_seconds'];
 
 		} else {
-			die("nincsmeg");
+			die("Not found");
 			return null;
 		}
 

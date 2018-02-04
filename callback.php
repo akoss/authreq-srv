@@ -1,14 +1,22 @@
 <?php 
 
+include('SignatureRequest.php');
+include('bencode.php');
+include('ApnsPHP/Autoload.php');
+
 $data = json_decode(file_get_contents('php://input'), true);
 
-$nonce = base64_decode($data["bencodedOriginalMessage"]);
+$message_id = $data["message_id"];
+
 $signature = $data["signature"];
 $pem = $data["publickey"];
 
+$db = new Db();
+$record = DatabaseSignatureRequest::loadFromDatabase($db, $message_id);
 
-$say = openssl_verify($nonce, hex2bin($signature), $pem, "sha256");
-shell_exec("say " . $say);
+$bencodedOriginalMessage = $record->getBencode();
+
+$say = openssl_verify($bencodedOriginalMessage, hex2bin($signature), $pem, "sha256");
 
 $status_header = 'HTTP/1.1 ' . "200";
 header($status_header);
