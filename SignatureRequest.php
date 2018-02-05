@@ -93,13 +93,13 @@ class SignatureRequest {
 		$this->srv_signature = $this->getSignature(); 
 	}
 
-	function sendPush($token) {
+	function sendPush($token, $pem, $rootca) {
 		$push = new ApnsPHP_Push(
 			ApnsPHP_Abstract::ENVIRONMENT_SANDBOX,
-			'both.pem'
+			$pem
 		);
 		$push->setLogger(new ApnsPHP_Log_Silent());
-		$push->setRootCertificationAuthority('entrust_root_certification_authority.pem');
+		$push->setRootCertificationAuthority($rootca);
 		$push->connect();
 		$message = new ApnsPHP_Message($token);
 
@@ -210,7 +210,7 @@ class DatabaseSignatureRequest extends SignatureRequest {
 		return (count($records) >= 1);
 	}
 
-	public function sendPush() {
+	public function sendPush($pem, $rootca) {
 		$records = $this->db->select("SELECT * FROM `device` WHERE device_id = " . $this->device_id . ";");
 		if(count($records) == 1) {
 			$record = $records[0];
@@ -219,7 +219,7 @@ class DatabaseSignatureRequest extends SignatureRequest {
 			return false;
 		}
 
-		return parent::sendPush($token);
+		return parent::sendPush($token, $pem, $rootca);
 	}
 }
 

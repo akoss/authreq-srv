@@ -2,6 +2,17 @@
 class Db {
     // The database connection
     protected static $connection;
+    protected $uri;
+    protected $username;
+    protected $password;
+    protected $dbname;
+
+    function __construct($uri, $username, $password, $dbname) {
+        $this->uri = $uri;
+        $this->username = $username;
+        $this->password = $password;
+        $this->dbname = $dbname;
+    }
 
     /**
      * Connect to the database
@@ -11,9 +22,7 @@ class Db {
     public function connect() {    
         // Try and connect to the database
         if(!isset(self::$connection)) {
-            // Load configuration as an array. Use the actual location of your configuration file
-            $config = parse_ini_file('./config.ini'); 
-            self::$connection = new mysqli('localhost',$config['username'],$config['password'],$config['dbname']);
+            self::$connection = new mysqli($this->uri,$this->username, $this->password, $this->dbname);
             self::$connection->set_charset('utf8mb4');
         }
 

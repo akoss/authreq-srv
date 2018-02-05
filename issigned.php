@@ -12,7 +12,7 @@ if(empty($message_id)) {
 	die("No message ID found");
 }
 
-$db = new Db();
+$db = new Db('localhost','root','almakorte','authreq-srv');
 $answer = DatabaseSignatureRequest::isSigned($db, $message_id);
 
 header('Content-type: ' . "application/json");

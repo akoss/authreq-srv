@@ -8,7 +8,7 @@ include('ApnsPHP/Autoload.php');
 
 date_default_timezone_set('Europe/Budapest');
 
-$db = new Db();
+$db = new Db('localhost','root','almakorte','authreq-srv');
 $signatureRequest = new DatabaseSignatureRequest($db);
 
 $signatureRequest->setupWith(
@@ -27,6 +27,6 @@ if(!$signatureRequest->saved) {
 }
 
 // $signatureRequest->sendPush($token = '5b54f9bd4215c3ba405a200d7e4353946f60e7878db7334b4cdc94bf53dbce52');
-$signatureRequest->sendPush();
+$signatureRequest->sendPush('/Users/harfox/uni/l5project/authreq-site/vendors/authreq-sdk/both.pem', '/Users/harfox/uni/l5project/authreq-site/vendors/authreq-sdk/entrust_root_certification_authority.pem');
 
 echo "<h1>Fin</h1>";
