@@ -2,6 +2,7 @@
 
 include('SignatureRequest.php');
 include('Signature.php');
+include('Db.php');
 include('bencode.php');
 include('ApnsPHP/Autoload.php');
 
