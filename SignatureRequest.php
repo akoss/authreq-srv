@@ -40,6 +40,27 @@ class SignatureRequest {
 		]);
 	}
 
+	public function getPushMessage($token = null) {
+		$message = new ApnsPHP_Message($token);
+
+		$message->setBadge(1);
+
+		$message->setText($this->push_text);
+		$message->setTitle($this->push_title);
+		$message->setSubtitle($this->push_subtitle);
+		$message->setCategory($this->push_category);
+		$message->setContentAvailable(true);
+		$message->setSound();
+
+		$additional_data = array('bencode' => $this->getBencode(), 'expiry' => $this->timestamp + $this->expiry_in_seconds, 'short_title' => $this->short_title, 'signature' => $this->srv_signature, 'message_id' => $this->message_id, 'nonce' => $this->nonce, 'response_url'=> $this->response_url);
+
+		$message->setCustomProperty('additional_data', $additional_data);
+
+		$message->setExpiry($this->expiry_in_seconds);
+
+		return $message;
+	}
+
 	function getHash() {
 		$bencoded = $this->getBencode();
 		return base64_encode(hash("sha256", $bencoded, true));
@@ -70,7 +91,7 @@ class SignatureRequest {
 		return base64_encode($binary_signature);
 	}
 
-	public function setupWith($service_provider_name, $message_id = null, $response_url, $long_description, $short_description, $nonce = null, $expiry_in_seconds = 300){
+	public function setupWith($service_provider_name, $message_id = null, $response_url, $long_description, $short_description, $nonce = null, $expiry_in_seconds = 300, $is_enroll = false){
 
 		$this->push_text = $long_description; 
 		$this->push_subtitle = $service_provider_name;
@@ -86,7 +107,11 @@ class SignatureRequest {
 		
 		$this->response_url = $response_url; 
 		$this->timestamp = time();
-		$this->push_category = 'challengecategory';
+		if($is_enroll) {
+			$this->push_category = 'enrolmentcategory';	
+		} else {
+			$this->push_category = 'challengecategory';
+		}
 
 		$this->push_title = json_decode('"\uD83D\uDD35"') . " " . 'New Signature Request';
 
@@ -101,22 +126,9 @@ class SignatureRequest {
 		$push->setLogger(new ApnsPHP_Log_Silent());
 		$push->setRootCertificationAuthority($rootca);
 		$push->connect();
-		$message = new ApnsPHP_Message($token);
 
-		$message->setBadge(1);
+		$message = $this->getPushMessage($token);
 
-		$message->setText($this->push_text);
-		$message->setTitle($this->push_title);
-		$message->setSubtitle($this->push_subtitle);
-		$message->setCategory($this->push_category);
-		$message->setContentAvailable(true);
-		$message->setSound();
-
-		$additional_data = array('bencode' => $this->getBencode(), 'expiry' => $this->timestamp + $this->expiry_in_seconds, 'short_title' => $this->short_title, 'signature' => $this->srv_signature, 'message_id' => $this->message_id, 'nonce' => $this->nonce, 'response_url'=> $this->response_url);
-
-		$message->setCustomProperty('additional_data', $additional_data);
-
-		$message->setExpiry($this->expiry_in_seconds);
 		$push->add($message);
 		$push->send();
 		$push->disconnect();
@@ -193,13 +205,21 @@ class DatabaseSignatureRequest extends SignatureRequest {
 		return $self;
 	}
 
-	public function setupWith($service_provider_name, $message_id, $response_url, $long_description, $short_description, $nonce, $expiry_in_seconds, $device_id){
-		parent::setupWith($service_provider_name, $message_id, $response_url, $long_description, $short_description, $nonce, $expiry_in_seconds);
+	public function setupWith($service_provider_name, $message_id, $response_url, $long_description, $short_description, $nonce, $expiry_in_seconds, $device_id, $is_enroll = false){
+		parent::setupWith($service_provider_name, $message_id, $response_url, $long_description, $short_description, $nonce, $expiry_in_seconds, $is_enroll);
 
 		$this->device_id = $device_id; 
 
 		$this->saved = ($this->save() == 1);
 		$this->srv_signature = $this->getSignature();
+	}
+
+	public static function isSignedWithDevice($db, $message_id) {
+		$msgid = $db->quote($message_id);
+		$query = "SELECT * FROM `signature` WHERE message_id = " . $msgid . " AND success = 1;";
+		$records = $db->select($query);
+
+		return array("is_signed" => (count($records) >= 1), "device_id" => (count($records) >= 1 ? $records[0]['device_id'] : null));
 	}
 
 	public static function isSigned($db, $message_id) {

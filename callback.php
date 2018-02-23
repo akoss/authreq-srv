@@ -9,12 +9,16 @@ $data = json_decode(file_get_contents('php://input'), true);
 
 $message_id = $data["message_id"];
 $signature = $data["signature"];
+$enrolment_pem = $data["publickey"];
+$enrolment_token = $data["token"];
 
 $db = new Db('localhost','root','almakorte','authreq-srv');
 $sig = new DatabaseSignature($db);
 $sig->setupWith(
 	$message_id = $message_id,
-	$signature = $signature
+	$signature = $signature, 
+	$enrolment_pem = $enrolment_pem, 
+	$enrolment_token = $enrolment_token
 );
 
 if(!$sig->saved) {

@@ -82,17 +82,17 @@ class DatabaseSignature extends Signature {
 		return $self;
 	}
 
-	public function setupWith($message_id, $signature){
-
+	public function setupWith($message_id, $signature, $enrolment_pem = null, $enrolment_token = null){
 		$records = $this->db->select("SELECT * FROM `signaturerequest` WHERE message_id = " . $message_id . ";");
+		$signaturerequest = null;
 		if(count($records) == 1) {
-			$record = $records[0];
-			$this->device_id = $record['device_id'];
+			$signaturerequest = $records[0];
+			$this->device_id = $signaturerequest['device_id'];
 		} else {
 			$this->device_id = null;
 		}
 
-		if($this->device_id != null) {
+		if($this->device_id != null && $this->device_id != -1) {
 			$records = $this->db->select("SELECT * FROM `device` WHERE device_id = " . $this->device_id . ";");
 			if(count($records) == 1) {
 				$record = $records[0];
@@ -101,11 +101,35 @@ class DatabaseSignature extends Signature {
 				$pem = null;
 			}			
 		} else {
-			$pem = null;
+			if($signaturerequest['push_category'] == 'enrolmentcategory') {
+				$pem = $enrolment_pem;
+			} else {
+				$pem = null;
+			}
 		}
 
 		parent::setupWith($message_id, $signature, $pem);
 		$this->success = $this->validate();
+
+		if($signaturerequest['push_category'] == 'enrolmentcategory' && $enrolment_token != null && $this->success) {
+
+			$qtoken = $this->db->quote($enrolment_token);
+			$qpem = $this->db->quote($enrolment_pem);
+
+			$records = $this->db->select("SELECT * FROM `device` WHERE pem = " . $qpem . " AND token = " . $qtoken . ";");
+			if(count($records) > 0) {
+				$this->device_id = $records[0]['device_id'];
+			} else {
+				$query = "INSERT INTO `device` (`pem`,`token`) VALUES (" . $qpem . "," . $qtoken . ")";
+
+				$result = $this->db->query($query) == 1;
+
+				if($result) {
+					$this->device_id = $this->db->insert_id();
+				}
+			}
+		}
+
 		$this->saved = ($this->save() == 1);
 	}
 
