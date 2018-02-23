@@ -91,7 +91,7 @@ class SignatureRequest {
 		return base64_encode($binary_signature);
 	}
 
-	public function setupWith($service_provider_name, $message_id = null, $response_url, $long_description, $short_description, $nonce = null, $expiry_in_seconds = 300, $is_enroll = false){
+	public function setupWith($service_provider_name, $message_id = null, $response_url, $long_description, $short_description, $nonce = null, $expiry_in_seconds = 300, $is_enrol = false){
 
 		$this->push_text = $long_description; 
 		$this->push_subtitle = $service_provider_name;
@@ -107,7 +107,7 @@ class SignatureRequest {
 		
 		$this->response_url = $response_url; 
 		$this->timestamp = time();
-		if($is_enroll) {
+		if($is_enrol) {
 			$this->push_category = 'enrolmentcategory';	
 		} else {
 			$this->push_category = 'challengecategory';
@@ -205,8 +205,8 @@ class DatabaseSignatureRequest extends SignatureRequest {
 		return $self;
 	}
 
-	public function setupWith($service_provider_name, $message_id, $response_url, $long_description, $short_description, $nonce, $expiry_in_seconds, $device_id, $is_enroll = false){
-		parent::setupWith($service_provider_name, $message_id, $response_url, $long_description, $short_description, $nonce, $expiry_in_seconds, $is_enroll);
+	public function setupWith($service_provider_name, $message_id, $response_url, $long_description, $short_description, $nonce, $expiry_in_seconds, $device_id, $is_enrol = false){
+		parent::setupWith($service_provider_name, $message_id, $response_url, $long_description, $short_description, $nonce, $expiry_in_seconds, $is_enrol);
 
 		$this->device_id = $device_id; 
 
