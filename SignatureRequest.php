@@ -63,7 +63,7 @@ class SignatureRequest {
 
 	function getHash() {
 		$bencoded = $this->getBencode();
-		return base64_encode(hash("sha256", $bencoded, true));
+		return base64_encode(hash("sha384", $bencoded, true));
 	}
 
 	function getSignature() {
@@ -74,15 +74,15 @@ class SignatureRequest {
 
 		$binary_signature = "";
 
-		openssl_sign($data, $binary_signature, $private_key, 'sha256WithRSAEncryption');
+		openssl_sign($data, $binary_signature, $private_key, 'sha384WithRSAEncryption');
 
-		$ok = openssl_verify($data, $binary_signature, $public_key, 'sha256');
+		$ok = openssl_verify($data, $binary_signature, $public_key, 'sha384WithRSAEncryption');
 
 		if ($ok != 1) {
 		    return null;
 		}
 
-		$ok = openssl_verify('tampered'.$data, $binary_signature, $public_key, 'sha256');
+		$ok = openssl_verify('tampered'.$data, $binary_signature, $public_key, 'sha384WithRSAEncryption');
 
 		if ($ok != 0) {
 		    return null;
@@ -118,9 +118,9 @@ class SignatureRequest {
 		$this->srv_signature = $this->getSignature(); 
 	}
 
-	function sendPush($token, $pem, $rootca) {
+	function sendPush($token, $pem, $rootca, $is_sandbox = true) {
 		$push = new ApnsPHP_Push(
-			ApnsPHP_Abstract::ENVIRONMENT_SANDBOX,
+			($is_sandbox ? ApnsPHP_Abstract::ENVIRONMENT_SANDBOX : ApnsPHP_Abstract::ENVIRONMENT_PRODUCTION),
 			$pem
 		);
 		$push->setLogger(new ApnsPHP_Log_Silent());
@@ -230,7 +230,7 @@ class DatabaseSignatureRequest extends SignatureRequest {
 		return (count($records) >= 1);
 	}
 
-	public function sendPush($pem, $rootca) {
+	public function sendPush($pem, $rootca, $is_sandbox = true) {
 		$records = $this->db->select("SELECT * FROM `device` WHERE device_id = " . $this->device_id . ";");
 		if(count($records) == 1) {
 			$record = $records[0];
@@ -239,7 +239,7 @@ class DatabaseSignatureRequest extends SignatureRequest {
 			return false;
 		}
 
-		return parent::sendPush($token, $pem, $rootca);
+		return parent::sendPush($token, $pem, $rootca, $is_sandbox);
 	}
 }
 

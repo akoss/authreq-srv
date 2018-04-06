@@ -19,7 +19,7 @@ class Signature {
 	}
 
 	public function validate($bencodedOriginalMessage) {
-		$result = openssl_verify($bencodedOriginalMessage, hex2bin($this->signature), $this->pem, "sha256");
+		$result = openssl_verify($bencodedOriginalMessage, hex2bin($this->signature), $this->pem, "sha384WithRSAEncryption");
 		return ($result == 1);
 	}
 }
